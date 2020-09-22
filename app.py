@@ -4,6 +4,7 @@ import json
 import logging
 import requests
 import time
+import datetime
 import hmac
 import hashlib
 import base64
@@ -45,18 +46,23 @@ def send_alert(data):
 
     for data in data['alerts']:
         title = data["labels"]["severity"]
+        instance = '- 告警实例: %s\n' % data["labels"]["instance"] if data["labels"].get("instance") else ""
+        alertname = '- 告警事件: %s\n' % data["labels"]["alertname"]
+        summary = '- 告警详情: %s\n' % data["annotations"]["summary"]
+        description = '- 所属项目: %s\n' % data["annotations"]["description"]
+        startsAt = '- 开始时间: %s\n' %  str(datetime.datetime.strptime(data["startsAt"].split('.')[0], "%Y-%m-%dT%H:%M:%S") + datetime.timedelta(hours=8))
+
         if data["status"] == "resolved":
             stat = '# <font color=#006600>recovery</font>\n'
+            endsAt = '- 恢复时间: %s\n' % str(datetime.datetime.strptime(data["endsAt"].split('.')[0], "%Y-%m-%dT%H:%M:%S") + datetime.timedelta(hours=8))
+            recive_data = stat + alertname + instance + description + summary + startsAt + endsAt
         elif data["labels"]["severity"] == 'warning':
             stat = '# <font color=#FF9933>%s</font>\n' % data["labels"]["severity"]
+            recive_data = stat + alertname + instance + description + summary + startsAt
         else:
             stat = '# <font color=#CC0000>%s</font>\n' % data["labels"]["severity"]
-        instance = '- 实例: %s\n' % data["labels"]["instance"] if data["labels"].get("instance") else ""
-        alertname = '- 事件: %s\n' % data["labels"]["alertname"]
-        summary = '- 描述: %s\n' % data["annotations"]["summary"]
-        description = '- 项目: %s\n' % data["annotations"]["description"]
-        startsAt = '- 时间: %s\n' % data["startsAt"].split(".")[0].replace('T', ' ')
-        recive_data = stat + alertname + instance + description + summary + startsAt
+            recive_data = stat + alertname + instance + description + summary + startsAt
+        
         send_data = {
             "msgtype": "markdown",
             "markdown": {
